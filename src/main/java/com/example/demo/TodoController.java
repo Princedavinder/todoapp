@@ -7,23 +7,22 @@ import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.propertyeditors.CustomDateEditor;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.ui.ModelMap;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.InitBinder;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.SessionAttributes;
 
 import com.example.demo.model.Todo;
 import com.example.demo.service.TodoService;
 
 @Controller
-@SessionAttributes("name")
 public class TodoController {
 	
 	@Autowired
@@ -38,13 +37,13 @@ public class TodoController {
 	
 	@RequestMapping(value="/list-todos",method=RequestMethod.GET)
 	public String showListTodos(ModelMap model) {
-		String name= (String)model.get("name");
+		String name= getLoggedInUserName();
 		model.addAttribute("todos",service.retrieveTodos(name));
 		return "list-todos";
 	}
 	@RequestMapping(value="/addtodo",method=RequestMethod.GET)
 	public String showAddTodo(ModelMap model) {
-		model.addAttribute("todo",new Todo(0, (String)model.get("name"), "", new Date(), false));
+		model.addAttribute("todo",new Todo(0,getLoggedInUserName(), "", new Date(), false));
 		return "todo";
 	}
 	@RequestMapping(value="/addtodo",method=RequestMethod.POST)
@@ -52,12 +51,15 @@ public class TodoController {
 		if(result.hasErrors()) {
 			return "todo";
 		}
-		service.addTodos((String)model.get("name"), todo.getDesc(), todo.getTargetDate(), false);
+		service.addTodos(getLoggedInUserName(), todo.getDesc(), todo.getTargetDate(), false);
 		return "redirect:/list-todos";
 	}
 	
 	@RequestMapping(value="/delete-todo",method=RequestMethod.GET)
 	public String deleteTodo(@RequestParam int id) {
+		if(id==1) {
+			throw new RuntimeException();
+		}
 		service.deleteTodos(id);
 		return "redirect:/list-todos";
 	}
@@ -72,11 +74,17 @@ public class TodoController {
 		if(rs.hasErrors()) {
 			return "todo";
 		}
-		todo.setUser((String)model.get("name"));
+		todo.setUser(getLoggedInUserName());
 		service.updateTodo(todo);
 		
 		return "redirect:/list-todos";
 	}
-	
+	public String getLoggedInUserName() {
+		Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+		if(principal instanceof UserDetails) {
+			return ((UserDetails)principal).getUsername();
+		}
+		return principal.toString();
+	}
 	
 }

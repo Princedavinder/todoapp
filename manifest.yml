@@ -1,0 +1,7 @@
+---
+applications:
+- name: Spring-prince
+  path: target/spring-boot-first-web-application-0.0.1-SNAPSHOT.jar
+  domain: cfapps.io
+  memory: 1G
+  instances: 1
